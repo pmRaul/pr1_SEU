@@ -1,0 +1,14 @@
+{
+    "coords": {
+        "accuracy": 17.729999542236328,
+        "altitude": 485.8999938964844,
+        "altitudeAccuracy": 1.9195548295974731,
+        "heading": 0,
+        "latitude": 37.7858188,
+        "longitude": -3.777601,
+        "speed": 0
+    },
+    "fecha": "20 de febrero de 2023, 15:28:03 UTC+1",
+    "mocked": false,
+    "timestamp": 1676903281234
+}
