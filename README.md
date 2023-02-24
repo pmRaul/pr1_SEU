@@ -1,4 +1,4 @@
-# Título del proyecto
+# Aplicación web que muestra los datos recogidos de un dispositivo móvil durante una caminata
 
 Este proyecto es una aplicación web que muestra los datos recogidos de un dispositivo móvil durante una caminata. La aplicación permite visualizar la duración de la caminata, el número de pasos dados, y la ruta recorrida en un mapa interactivo.
 
