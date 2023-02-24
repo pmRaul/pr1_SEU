@@ -20,6 +20,7 @@ Antes de poder ejecutar la aplicación es necesario tener instalado lo siguiente
 
 ```bash
 pip install firebase-admin pandas streamlit folium
+```
 
 ## Cómo ejecutar la aplicación
 
@@ -30,6 +31,7 @@ pip install firebase-admin pandas streamlit folium
 
 ```bash
 streamlit run app.py
+```
 
 5. Abre tu navegador web y ve a la dirección http://localhost:8501
 
