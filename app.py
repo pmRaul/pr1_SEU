@@ -1,66 +1,52 @@
-# Importar librerías
-import firebase_admin
-from firebase_admin import credentials, firestore
-import pandas as pd
-from geopy.distance import distance
 import streamlit as st
-import folium
+from firebase_admin import credentials, firestore, initialize_app
+from datetime import datetime
 
-# Obtener la base de datos
-cred = credentials.Certificate("./baseDatosCredenciales.json")
-firebase_admin.initialize_app(cred)
+# Inicializar la conexión con Firestore
+cred = credentials.Certificate('./baseDatosCredenciales.json')
+initialize_app(cred)
 db = firestore.client()
 
-# Obtener los datos
-def get_data():
-    docs = db.collection("caminatas").stream()
-    data = [doc.to_dict() for doc in docs]
-    return pd.DataFrame(data)
+# Obtener los datos de las caminatas
+caminatas_ref = db.collection('TodoData')
+caminatas = caminatas_ref.get()
 
-# Procesar los datos
-def process_data(data):
-    data = data.copy() # evitar posibles efectos secundarios en el DataFrame original
+datos = []
 
-    # Convertir fechas a datetime
-    for col in ["fechaInicial", "fechaFinal", "fecha"]:
-        data[col] = pd.to_datetime(data[col], format="%d de %B de %Y, %H:%M:%S %Z%z")
+# Añadir el campo de identificador único a cada ubicación
+for caminata in caminatas:
+    caminata_ = caminata.to_dict()
+    caminata_['datos'] = []
+    datos.append(caminata_)
 
-    # Calcular la distancia en cada punto
-    coords = [(row["coords"]["latitude"], row["coords"]["longitude"]) for _, row in data.iterrows()]
-    distances = [0] + [distance(coords[i], coords[i+1]).meters for i in range(len(coords)-1)]
-    data["distancia"] = distances
+# Obtener los datos de las ubicaciones
+ubicaciones_ref = db.collection('LocalizacionData')
+ubicaciones = ubicaciones_ref.get()
 
-    # Agregar columnas de latitud y longitud inicial y final
-    data["latInicial"] = data.iloc[0]["coords"]["latitude"]
-    data["lonInicial"] = data.iloc[0]["coords"]["longitude"]
-    data["latFinal"] = data.iloc[-1]["coords"]["latitude"]
-    data["lonFinal"] = data.iloc[-1]["coords"]["longitude"]
+# Añadir el campo de identificador único a cada ubicación
+for ubicacion in ubicaciones:
+    ubicacion_temp = ubicacion.to_dict()
+    for dato in datos:
+        if dato['id'] == ubicacion_temp['id']:
+            dato['datos'].append(ubicacion_temp)
 
-    # Calcular la duración en minutos
-    data["duracion"] = (data["fechaFinal"] - data["fechaInicial"]).dt.total_seconds() / 60
+# Mostrar los datos en Streamlit
+st.title('Datos de las caminatas')
 
-    return data
-
-# Crear una aplicación Streamlit que muestre los datos procesados
-def show_data(data):
-    # Mostrar la información general
-    st.header("Caminata de {} ({})".format(data.iloc[0]["persona"], data.iloc[0]["fechaInicial"].strftime("%d/%m/%Y")))
-    st.subheader("Duración: {} minutos".format(int(data.iloc[0]["duracion"])))
-    st.subheader("Número de pasos: {}".format(data.iloc[0]["numPasos"]))
-
-    # Mostrar el mapa
-    m = folium.Map(location=[data.iloc[0]["latInicial"], data.iloc[0]["lonInicial"]], zoom_start=16)
-    for _, row in data.iterrows():
-        folium.Marker([row["coords"]["latitude"], row["coords"]["longitude"]], popup=row["fecha"].strftime("%H:%M:%S")).add_to(m)
-    folium.PolyLine([[row["coords"]["latitude"], row["coords"]["longitude"]] for _, row in data.iterrows()], color="red").add_to(m)
-    folium.Marker([data.iloc[0]["latInicial"], data.iloc[0]["lonInicial"]], popup="Inicio").add_to(m)
-    folium.Marker([data.iloc[-1]["latFinal"], data.iloc[-1]["lonFinal"]], popup="Fin").add_to(m)
-    st.markdown(folium.Markdown(m._repr_html_()), unsafe_allow_html=True)
-
-    # Mostrar la tabla de datos
-    st.write(data[["fecha", "coords", "distancia"]])
-
-# Ejecutar la aplicación
-if __name__ == "__main__":
-    data = get_data()
-    data = process_data(data)
+for dato in datos:
+    st.subheader(f'Caminata {dato["id"]}')
+    st.write(f'Duración: {dato["duracion"]}')
+    st.write(f'Fecha de inicio: {dato["fechaInicial"]}')
+    st.write(f'Fecha de finalización: {dato["fechaFinal"]}')
+    st.write(f'Número de pasos: {dato["numPasos"]}')
+    st.write(f'Persona: {dato["persona"]}')
+    st.write('Ubicaciones:')
+    #query = db.collection('LocalizacionData').where('id', '==', dato['id']).order_by('timestamp')
+    #ubicaciones = query.get()
+    for ubicacion in dato['datos']:
+        st.write(f'Fecha: {ubicacion["fecha"]}')
+        st.write(f'Latitud: {ubicacion["coords"]["latitude"]}')
+        st.write(f'Longitud: {ubicacion["coords"]["longitude"]}')
+        st.write(f'Altitud: {ubicacion["coords"]["altitude"]}')
+        st.write(f'Precisión: {ubicacion["coords"]["accuracy"]}')
+        st.write('---')
