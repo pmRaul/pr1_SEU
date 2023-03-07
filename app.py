@@ -1,6 +1,9 @@
 import streamlit as st
+import folium
+import plotly.express as px
 from firebase_admin import credentials, firestore, initialize_app
 from datetime import datetime
+from streamlit_folium import folium_static
 
 # Inicializar la conexión con Firestore
 cred = credentials.Certificate('./baseDatosCredenciales.json')
@@ -33,20 +36,32 @@ for ubicacion in ubicaciones:
 # Mostrar los datos en Streamlit
 st.title('Datos de las caminatas')
 
+# Crear un desplegable para seleccionar cada caminata
+caminata_seleccionada = st.selectbox('Selecciona una caminata:', [dato["id"] for dato in datos])
+
+# Encontrar la caminata seleccionada
 for dato in datos:
-    st.subheader(f'Caminata {dato["id"]}')
-    st.write(f'Duración: {dato["duracion"]}')
-    st.write(f'Fecha de inicio: {dato["fechaInicial"]}')
-    st.write(f'Fecha de finalización: {dato["fechaFinal"]}')
-    st.write(f'Número de pasos: {dato["numPasos"]}')
-    st.write(f'Persona: {dato["persona"]}')
-    st.write('Ubicaciones:')
-    #query = db.collection('LocalizacionData').where('id', '==', dato['id']).order_by('timestamp')
-    #ubicaciones = query.get()
-    for ubicacion in dato['datos']:
-        st.write(f'Fecha: {ubicacion["fecha"]}')
-        st.write(f'Latitud: {ubicacion["coords"]["latitude"]}')
-        st.write(f'Longitud: {ubicacion["coords"]["longitude"]}')
-        st.write(f'Altitud: {ubicacion["coords"]["altitude"]}')
-        st.write(f'Precisión: {ubicacion["coords"]["accuracy"]}')
-        st.write('---')
+    if dato['id'] == caminata_seleccionada:
+        st.subheader(f'Caminata {dato["id"]}')
+        st.write(f'Duración: {dato["duracion"]}')
+        st.write(f'Fecha de inicio: {dato["fechaInicial"]}')
+        st.write(f'Fecha de finalización: {dato["fechaFinal"]}')
+        st.write(f'Número de pasos: {dato["numPasos"]}')
+        st.write(f'Persona: {dato["persona"]}')
+        st.write('Ubicaciones:')
+        m = folium.Map(location=[dato['datos'][0]['coords']['latitude'], dato['datos'][0]['coords']['longitude']], zoom_start=15)
+        velocidades = []
+        alturas = []
+        for ubicacion in dato['datos']:
+            folium.Marker([ubicacion["coords"]["latitude"], ubicacion["coords"]["longitude"]], popup=f'Fecha: {ubicacion["fecha"]}', tooltip=f'Latitud: {ubicacion["coords"]["latitude"]}, Longitud: {ubicacion["coords"]["longitude"]}').add_to(m)
+            velocidades.append(ubicacion["coords"]["speed"])
+            alturas.append(ubicacion["coords"]["altitude"])
+        folium_static(m)
+        
+        # Mostrar la gráfica de velocidades
+        st.subheader('Gráfica de Velocidades')
+        st.line_chart(velocidades)
+        
+        # Mostrar la gráfica de alturas
+        st.subheader('Gráfica de Alturas')
+        st.line_chart(alturas)
